@@ -1,4 +1,5 @@
 <?php
+
 namespace Vinelab\Cdn;
 
 use Illuminate\Support\Facades\Request;
@@ -9,15 +10,14 @@ use Vinelab\Cdn\Exceptions\EmptyPathException;
 use Vinelab\Cdn\Validators\CdnFacadeValidator;
 
 /**
- * Class CdnFacade
+ * Class CdnFacade.
  *
  * @category
- * @package Vinelab\Cdn
+ *
  * @author  Mahmoud Zalt <mahmoud@vinelab.com>
  */
 class CdnFacade implements CdnFacadeInterface
 {
-
     /**
      * @var array
      */
@@ -29,7 +29,7 @@ class CdnFacade implements CdnFacadeInterface
     protected $provider_factory;
 
     /**
-     * instance of the default provider object
+     * instance of the default provider object.
      *
      * @var \Vinelab\Cdn\Providers\Contracts\ProviderInterface
      */
@@ -46,7 +46,7 @@ class CdnFacade implements CdnFacadeInterface
     protected $cdn_facade_validator;
 
     /**
-     * Calls the provider initializer
+     * Calls the provider initializer.
      *
      * @param \Vinelab\Cdn\Contracts\ProviderFactoryInterface $provider_factory
      * @param \Vinelab\Cdn\Contracts\CdnHelperInterface       $helper
@@ -67,11 +67,12 @@ class CdnFacade implements CdnFacadeInterface
     /**
      * this function will be called from the 'views' using the
      * 'Cdn' facade {{Cdn::asset('')}} to convert the path into
-     * it's CDN url
+     * it's CDN url.
      *
      * @param $path
      *
      * @return mixed
+     *
      * @throws Exceptions\EmptyPathException
      */
     public function asset($path)
@@ -79,16 +80,39 @@ class CdnFacade implements CdnFacadeInterface
         // if asset always append the public/ dir to the path (since the user should not add public/ to asset)
         return $this->generateUrl($path, 'public/');
     }
-
-
-    /**
+	
+	/**
      * this function will be called from the 'views' using the
-     * 'Cdn' facade {{Cdn::path('')}} to convert the path into
-     * it's CDN url
+     * 'Cdn' facade {{Cdn::elixir('')}} to convert the elixir generated file path into
+     * it's CDN url.
      *
      * @param $path
      *
      * @return mixed
+     *
+     * @throws Exceptions\EmptyPathException, \InvalidArgumentException
+     */
+	public function elixir($path)
+    {
+        static $manifest = null;
+        if (is_null($manifest)) {
+            $manifest = json_decode(file_get_contents(public_path('build/rev-manifest.json')), true);
+        }
+        if (isset($manifest[$path])) {
+            return $this->generateUrl('build/' . $manifest[$path], 'public/');
+        }
+        throw new \InvalidArgumentException("File {$path} not defined in asset manifest.");
+    }
+
+    /**
+     * this function will be called from the 'views' using the
+     * 'Cdn' facade {{Cdn::path('')}} to convert the path into
+     * it's CDN url.
+     *
+     * @param $path
+     *
+     * @return mixed
+     *
      * @throws Exceptions\EmptyPathException
      */
     public function path($path)
@@ -98,7 +122,7 @@ class CdnFacade implements CdnFacadeInterface
 
     /**
      * check if package is surpassed or not then
-     * prepare the path before generating the url
+     * prepare the path before generating the url.
      *
      * @param        $path
      * @param string $prepend
@@ -110,7 +134,7 @@ class CdnFacade implements CdnFacadeInterface
         // if the package is surpassed, then return the same $path
         // to load the asset from the localhost
         if (isset($this->configurations['bypass']) && $this->configurations['bypass']) {
-            return Request::root() .'/'. $path;
+            return Request::root().'/'.$path;
         }
 
         if (!isset($path)) {
@@ -126,7 +150,7 @@ class CdnFacade implements CdnFacadeInterface
 
         // remove slashes from begging and ending of the path
         // and append directories if needed
-        $clean_path = $prepend . $this->helper->cleanPath($path);
+        $clean_path = $prepend.$this->helper->cleanPath($path);
 
         // call the provider specific url generator
         return $this->provider->urlGenerator($clean_path);
@@ -135,8 +159,7 @@ class CdnFacade implements CdnFacadeInterface
     /**
      * Read the configuration file and pass it to the provider factory
      * to return an object of the default provider specified in the
-     * config file
-     *
+     * config file.
      */
     private function init()
     {
@@ -146,5 +169,4 @@ class CdnFacade implements CdnFacadeInterface
         // return an instance of the corresponding Provider concrete according to the configuration
         $this->provider = $this->provider_factory->create($this->configurations);
     }
-
 }
